@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+    <title>Threat Result</title>
+
+    <link rel="stylesheet"
+    href="{{ url_for('static', filename='style.css') }}">
+
+</head>
+
+<body>
+
+<div class="container">
+
+    <h1>Threat Analysis Result</h1>
+
+    <p>
+        <strong>Report:</strong>
+        {{ report }}
+    </p>
+
+    <p>
+        <strong>Threat Level:</strong>
+        {{ threat }}
+    </p>
+
+    <p>
+        <strong>Blockchain Hash:</strong>
+        {{ block_hash }}
+    </p>
+
+    <a href="/">Go Back</a>
+
+</div>
+
+</body>
+</html>

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+    <title>Dashboard</title>
+
+    <link rel="stylesheet"
+    href="{{ url_for('static', filename='style.css') }}">
+
+</head>
+
+<body>
+
+<div class="container">
+
+    <h1>Admin Dashboard</h1>
+
+    <table border="1">
+
+        <tr>
+            <th>ID</th>
+            <th>Report</th>
+            <th>Threat Level</th>
+            <th>Blockchain Hash</th>
+        </tr>
+
+        {% for report in reports %}
+
+        <tr>
+
+            <td>{{ report[0] }}</td>
+            <td>{{ report[1] }}</td>
+            <td>{{ report[2] }}</td>
+            <td>{{ report[3] }}</td>
+
+        </tr>
+
+        {% endfor %}
+
+    </table>
+
+    <a href="/">Home</a>
+
+</div>
+
+</body>
+</html>

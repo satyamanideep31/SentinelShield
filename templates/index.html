@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+    <title>Sentinel Shield</title>
+
+    <link rel="stylesheet"
+    href="{{ url_for('static', filename='style.css') }}">
+
+</head>
+
+<body>
+
+<div class="container">
+
+    <h1>Sentinel Shield</h1>
+
+    <h3>
+        Predictive Intervention &
+        Community Protection Network
+    </h3>
+
+    <form action="/analyze" method="POST">
+
+        <textarea
+        name="report"
+        placeholder="Enter suspicious activity report..."
+        required></textarea>
+
+        <button type="submit">
+            Analyze Threat
+        </button>
+
+    </form>
+
+    <a href="/dashboard">
+        View Dashboard
+    </a>
+
+</div>
+
+</body>
+</html>
