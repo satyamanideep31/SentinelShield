@@ -1,40 +1,57 @@
-from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.naive_bayes import MultinomialNB
+def predict_threat(report):
 
-training_data = [
-    "gun attack in area",
-    "cyber hacking detected",
-    "normal community meeting",
-    "suspicious person found",
-    "bank fraud attempt",
-    "peaceful event",
-    "phishing email attack",
-    "weapon seen near school"
-]
+    report = report.lower()
 
-labels = [
-    "High",
-    "High",
-    "Low",
-    "Medium",
-    "High",
-    "Low",
-    "High",
-    "High"
-]
+    high_keywords = [
+        "gun",
+        "knife",
+        "fight",
+        "bomb",
+        "attack",
+        "terrorist",
+        "kidnap",
+        "fire",
+        "shooting",
+        "explosion",
+        "blood",
+        "suspicious person",
+        "weapon",
+        "intruder",
+        "unauthorized access"
+    ]
 
-vectorizer = CountVectorizer()
+    medium_keywords = [
+        "running",
+        "shouting",
+        "crowd",
+        "unknown person",
+        "external person",
+        "teacher entered",
+        "stranger",
+        "panic"
+    ]
 
-X = vectorizer.fit_transform(training_data)
+    low_keywords = [
+        "bird",
+        "kid",
+        "playing",
+        "dog",
+        "cat",
+        "walking",
+        "normal",
+        "student"
+    ]
 
-model = MultinomialNB()
+    for word in high_keywords:
+        if word in report:
+            return "High"
 
-model.fit(X, labels)
+    for word in medium_keywords:
+        if word in report:
+            return "Medium"
 
-def predict_threat(text):
+    for word in low_keywords:
+        if word in report:
+            return "Low"
 
-    transformed = vectorizer.transform([text])
-
-    result = model.predict(transformed)
-
-    return result[0]
+    return "Medium"
