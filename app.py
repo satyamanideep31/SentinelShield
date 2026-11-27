@@ -1,3 +1,6 @@
+import time
+import hmac
+import threading
 import os
 import json
 import re
@@ -11,7 +14,7 @@ from telegram_alert import send_telegram_alert
 
 app = Flask(__name__)
 
-app.config["MAX_CONTENT_LENGTH"] = 32768
+app.config["MAX_CONTENT_LENGTH"] = 2 * 1024 * 1024
 
 # DATABASE INITIALIZATION
 
@@ -427,7 +430,237 @@ def dashboard():
 
     )
 
+# =========================
+# AUTOMATIC CAMERA MONITORING
+# =========================
 
+MONITOR_KEY = os.getenv("MONITOR_KEY", "")
+
+last_scan = 0
+last_alert = 0
+
+camera_lock = threading.Lock()
+
+
+@app.route("/camera-analysis", methods=["POST"])
+def camera_analysis():
+
+    global last_scan, last_alert
+
+    supplied_key = request.headers.get(
+        "X-Monitor-Key", ""
+    )
+
+    if not MONITOR_KEY or not hmac.compare_digest(
+        supplied_key, MONITOR_KEY
+    ):
+        return jsonify({
+            "error": "Monitoring access denied"
+        }), 403
+
+    if not client:
+        return jsonify({
+            "error": "Gemini API unavailable"
+        }), 503
+
+    photo = request.files.get("image")
+
+    if not photo:
+        return jsonify({
+            "error": "No image received"
+        }), 400
+
+    image = photo.read()
+
+    if not image.startswith(b"\xff\xd8\xff"):
+        return jsonify({
+            "error": "JPEG image required"
+        }), 400
+
+    try:
+        latitude = float(request.form.get("latitude"))
+        longitude = float(request.form.get("longitude"))
+
+        if not (
+            -90 <= latitude <= 90
+            and -180 <= longitude <= 180
+        ):
+            raise ValueError()
+
+    except (TypeError, ValueError):
+        latitude = None
+        longitude = None
+
+    if not camera_lock.acquire(blocking=False):
+        return jsonify({
+            "error": "Analysis already running"
+        }), 429
+
+    try:
+
+        now = time.monotonic()
+
+        if last_scan and now - last_scan < 25:
+            return jsonify({
+                "error": "Please wait before next scan"
+            }), 429
+
+        last_scan = now
+
+        response = client.models.generate_content(
+
+            model=MODEL,
+
+            contents=[
+
+                types.Part.from_bytes(
+                    data=image,
+                    mime_type="image/jpeg"
+                ),
+
+                """
+Analyze this camera image for visible safety hazards.
+
+Look for observable evidence of:
+- Fire or smoke
+- Physical accidents
+- Active physical violence
+- Clearly visible immediate dangers
+
+Describe only what is visible.
+
+Do not identify individuals.
+Do not infer criminal intent, identity,
+or dangerousness from appearance.
+Do not classify ordinary activities as threats.
+
+A single image cannot establish intent.
+If the image is unclear, return Unknown.
+Use High only for clear visible evidence
+of an immediate safety hazard.
+
+Return JSON containing:
+threat_level: Low, Medium, High or Unknown
+description: Visible situation
+reason: Reason for classification
+action: Recommended safety action
+
+All values must be strings.
+"""
+
+            ],
+
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+                temperature=0.2,
+                max_output_tokens=1024
+            )
+
+        )
+
+        result = json.loads(response.text)
+
+        threat = result["threat_level"].strip().title()
+
+        if threat not in [
+            "Low", "Medium", "High", "Unknown"
+        ]:
+            raise ValueError("Invalid risk level")
+
+        for field in ["description", "reason", "action"]:
+            if not isinstance(result[field], str):
+                raise ValueError("Invalid AI response")
+
+        description = result["description"]
+        reason = result["reason"]
+        action = result["action"]
+
+        report = (
+            f"Camera AI Detection\n"
+            f"Situation: {description}\n"
+            f"Reason: {reason}\n"
+            f"Action: {action}"
+        )
+
+        alert_sent = False
+        alert_status = "Not required"
+
+        # HIGH RISK INCIDENT
+
+        if threat == "High":
+
+            now = time.monotonic()
+
+            if not last_alert or now - last_alert >= 120:
+
+                previous_block = (
+                    blockchain.get_previous_block()
+                )
+
+                block = blockchain.create_block(
+                    data=report,
+                    previous_hash=previous_block["hash"]
+                )
+
+                insert_report(
+                    report,
+                    threat,
+                    block["hash"]
+                )
+
+                try:
+
+                    send_telegram_alert(
+                        report,
+                        threat,
+                        latitude,
+                        longitude,
+                        image=image
+                    )
+
+                    last_alert = time.monotonic()
+
+                    alert_sent = True
+                    alert_status = "Telegram alert sent"
+
+                except Exception:
+
+                    alert_status = "Telegram delivery failed"
+
+                    app.logger.error(
+                        "Camera Telegram alert failed"
+                    )
+
+            else:
+
+                alert_status = "Alert cooldown active"
+
+        return jsonify({
+
+            "threat_level": threat,
+            "description": description,
+            "reason": reason,
+            "action": action,
+            "alert_sent": alert_sent,
+            "alert_status": alert_status
+
+        })
+
+    except Exception as e:
+
+        app.logger.error(
+            "Camera analysis failed: %s, code=%s",
+            type(e).__name__,
+            getattr(e, "code", "unknown")
+        )
+
+        return jsonify({
+            "error": "Gemini camera analysis unavailable"
+        }), 503
+
+    finally:
+
+        camera_lock.release()
 # RUN APPLICATION
 
 if __name__ == "__main__":
