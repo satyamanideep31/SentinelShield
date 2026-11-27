@@ -79,7 +79,14 @@ AI assessment — human verification required.
             timeout=10
         )
 
-    if not response.ok or not response.json().get("ok"):
-        raise RuntimeError("Telegram delivery failed")
+result = response.json()
 
-    return True
+if not response.ok or not result.get("ok"):
+        raise RuntimeError(
+            f"Telegram error: {result.get('error_code')} - "
+            f"{result.get('description')}"
+        )
+
+print("Telegram alert sent successfully", flush=True)
+
+return True
