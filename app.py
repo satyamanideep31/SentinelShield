@@ -211,3 +211,84 @@ if __name__ == '__main__':
     app.run(debug=True)
     if __name__ == "__main__":
         app.run(host="0.0.0.0", port=5000)
+
+# ==============================
+# SENTINEL SHIELD AI CHATBOT
+# ==============================
+import os
+import streamlit as st
+from openai import OpenAI
+
+st.markdown("---")
+st.header("🛡️ Sentinel AI Assistant")
+st.caption("AI-powered cybersecurity and community safety assistant")
+
+api_key = os.getenv("OPENAI_API_KEY")
+
+if not api_key:
+    st.error("OpenAI API key is missing. Please configure it in Render Environment.")
+else:
+    client = OpenAI(api_key=api_key)
+
+    if "sentinel_messages" not in st.session_state:
+        st.session_state.sentinel_messages = []
+
+    # Clear conversation
+    if st.button("🗑️ Clear Chat"):
+        st.session_state.sentinel_messages = []
+        st.rerun()
+
+    # Display chat history
+    for message in st.session_state.sentinel_messages:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
+
+    # Chat input
+    prompt = st.chat_input("Ask Sentinel AI anything...")
+
+    if prompt:
+        st.session_state.sentinel_messages.append(
+            {"role": "user", "content": prompt}
+        )
+
+        with st.chat_message("user"):
+            st.markdown(prompt)
+
+        with st.chat_message("assistant"):
+            with st.spinner("Sentinel AI is thinking..."):
+                try:
+                    response = client.chat.completions.create(
+                        model="gpt-4o-mini",
+                        messages=[
+                            {
+                                "role": "system",
+                                "content": """
+You are Sentinel AI, the intelligent assistant of Sentinel Shield.
+
+Your responsibilities:
+- Explain cybersecurity concepts.
+- Explain community safety and threat reports.
+- Help users understand risk scores and dashboard analytics.
+- Recommend safe preventive actions.
+- Provide clear, simple, practical answers.
+- Never claim an AI prediction is a confirmed real-world threat.
+- Protect privacy and never request unnecessary sensitive information.
+- For emergencies, advise users to contact local emergency services.
+
+Be friendly, professional, and concise.
+"""
+                            },
+                            *st.session_state.sentinel_messages
+                        ]
+                    )
+
+                    answer = response.choices[0].message.content
+
+                    st.markdown(answer)
+
+                    st.session_state.sentinel_messages.append(
+                        {"role": "assistant", "content": answer}
+                    )
+
+                except Exception as e:
+                    st.error(f"AI Error: {e}")
