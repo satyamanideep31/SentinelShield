@@ -6,24 +6,64 @@
     <meta charset="UTF-8">
 
     <meta name="viewport"
-    content="width=device-width, initial-scale=1.0">
+          content="width=device-width, initial-scale=1.0">
 
     <title>Sentinel Shield Pro</title>
 
     <link
-    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
-    rel="stylesheet">
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+        rel="stylesheet">
 
     <link rel="stylesheet"
-    href="{{ url_for('static', filename='style.css') }}">
+        href="{{ url_for('static', filename='style.css') }}">
+
+    <style>
+
+        .camera-panel {
+            background: #101827;
+            color: white;
+            border: 1px solid #334155;
+            border-radius: 18px;
+            padding: 25px;
+            margin: 30px auto;
+            max-width: 1000px;
+        }
+
+        #camera {
+            width: 100%;
+            max-height: 420px;
+            background: black;
+            border-radius: 12px;
+            object-fit: contain;
+        }
+
+        .camera-controls {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin: 20px 0;
+        }
+
+        .camera-result {
+            background: #1e293b;
+            padding: 20px;
+            border-radius: 12px;
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+        }
+
+        #cameraStatus {
+            color: #38bdf8;
+            font-weight: bold;
+        }
+
+    </style>
 
 </head>
 
 <body>
 
 <div class="main-container">
-
-    <!-- NAVBAR -->
 
     <nav class="navbar-custom">
 
@@ -32,12 +72,10 @@
         </div>
 
         <div class="nav-status">
-            ● Secure System Active
+            ● Security System Online
         </div>
 
     </nav>
-
-    <!-- HERO SECTION -->
 
     <section class="hero-section">
 
@@ -53,9 +91,9 @@
             </h1>
 
             <p>
-                Sentinel Shield Pro analyzes suspicious activities,
-                tracks locations, stores immutable blockchain logs,
-                and generates instant security alerts.
+                Sentinel Shield Pro analyzes activities,
+                tracks locations, stores blockchain logs,
+                and generates security alerts.
             </p>
 
             <div class="feature-grid">
@@ -84,26 +122,22 @@
 
             <div class="analysis-box">
 
-                <h2>
-                    Analyze Activity
-                </h2>
+                <h2>Analyze Activity</h2>
 
                 <form action="/analyze" method="POST">
 
                     <textarea
-                    name="report"
-                    placeholder="Describe suspicious activity..."
-                    required></textarea>
+                        name="report"
+                        placeholder="Describe suspicious activity..."
+                        required></textarea>
 
-                    <input
-                    type="hidden"
-                    id="latitude"
-                    name="latitude">
+                    <input type="hidden"
+                        id="latitude"
+                        name="latitude">
 
-                    <input
-                    type="hidden"
-                    id="longitude"
-                    name="longitude">
+                    <input type="hidden"
+                        id="longitude"
+                        name="longitude">
 
                     <button type="submit">
                         Analyze Threat
@@ -113,12 +147,10 @@
 
                 <div class="status-box">
 
-                    <div>
-                        🟢 AI Monitoring Active
-                    </div>
+                    <div>🤖 Gemini AI Analysis</div>
 
-                    <div>
-                        📍 GPS Enabled
+                    <div id="gpsStatus">
+                        📍 GPS awaiting permission
                     </div>
 
                     <div>
@@ -133,38 +165,434 @@
 
     </section>
 
+    <!-- CAMERA MONITORING SECTION -->
+
+    <section class="camera-panel">
+
+        <h2>📷 AI Live Camera Monitoring</h2>
+
+        <p>
+            Automatic visual safety analysis
+            powered by Google Gemini AI.
+        </p>
+
+        <p id="cameraStatus">
+            Camera Offline
+        </p>
+
+        <video id="camera"
+               autoplay
+               playsinline
+               muted>
+        </video>
+
+        <canvas id="canvas" hidden></canvas>
+
+        <div class="camera-controls">
+
+            <button
+                class="btn btn-success"
+                id="startButton"
+                onclick="startMonitoring()">
+
+                ▶ Start AI Monitoring
+
+            </button>
+
+            <button
+                class="btn btn-danger"
+                onclick="stopMonitoring()">
+
+                ■ Stop Monitoring
+
+            </button>
+
+        </div>
+
+        <p>
+            Scan interval: 30 seconds after each analysis.
+            High-risk alerts include image and location
+            when available.
+        </p>
+
+        <div class="camera-result"
+             id="cameraResult">
+
+            Waiting for camera activation...
+
+        </div>
+
+        <small>
+            Use only in authorized areas with consent.
+            Images are sent to Gemini for analysis.
+            High-risk images may be sent to Telegram.
+            AI results require human verification.
+        </small>
+
+    </section>
+
     <footer>
-        Sentinel Shield Pro © 2026 | 
+        Sentinel Shield Pro © 2026
     </footer>
 
 </div>
 
 <script>
 
-navigator.geolocation.getCurrentPosition(
+let stream = null;
+let timer = null;
+let monitoring = false;
+let busy = false;
+let monitorKey = "";
+let sessionId = 0;
+let gpsWatch = null;
 
-    function(position){
+let latitude = "";
+let longitude = "";
 
-        document.getElementById("latitude").value =
-        position.coords.latitude;
+const video = document.getElementById("camera");
+const canvas = document.getElementById("canvas");
 
-        document.getElementById("longitude").value =
-        position.coords.longitude;
+const statusBox =
+    document.getElementById("cameraStatus");
 
-    },
+const resultBox =
+    document.getElementById("cameraResult");
 
-    function(error){
+const startButton =
+    document.getElementById("startButton");
 
-        console.log("Location permission denied");
+
+// GPS LOCATION
+
+function updateLocation(position) {
+
+    latitude = position.coords.latitude;
+    longitude = position.coords.longitude;
+
+    document.getElementById("latitude").value =
+        latitude;
+
+    document.getElementById("longitude").value =
+        longitude;
+
+    document.getElementById("gpsStatus").textContent =
+        "📍 GPS Location Available";
+
+}
+
+function locationError() {
+
+    latitude = "";
+    longitude = "";
+
+    document.getElementById("latitude").value = "";
+    document.getElementById("longitude").value = "";
+
+    document.getElementById("gpsStatus").textContent =
+        "📍 GPS Unavailable";
+
+}
+
+if (navigator.geolocation) {
+
+    navigator.geolocation.getCurrentPosition(
+        updateLocation,
+        locationError
+    );
+
+}
+
+
+// START CAMERA
+
+async function startMonitoring() {
+
+    if (monitoring || busy || stream) return;
+
+    const permission = confirm(
+        "Start authorized camera monitoring? " +
+        "Images will be sent to Gemini and high-risk " +
+        "alerts may include photos and GPS in Telegram."
+    );
+
+    if (!permission) return;
+
+    monitorKey = prompt("Enter monitoring access key:");
+
+    if (!monitorKey) return;
+
+    startButton.disabled = true;
+
+    const currentSession = ++sessionId;
+
+    try {
+
+        stream = await navigator.mediaDevices.getUserMedia({
+
+            video: {
+                facingMode: {
+                    ideal: "environment"
+                },
+                width: { ideal: 640 },
+                height: { ideal: 480 }
+            },
+
+            audio: false
+
+        });
+
+        if (currentSession !== sessionId) {
+
+            stream.getTracks().forEach(
+                track => track.stop()
+            );
+
+            stream = null;
+            return;
+
+        }
+
+        video.srcObject = stream;
+
+        await video.play();
+
+        if (currentSession !== sessionId) return;
+
+        monitoring = true;
+
+        statusBox.textContent =
+            "🟢 AI Camera Monitoring Active";
+
+        if (navigator.geolocation) {
+
+            gpsWatch = navigator.geolocation.watchPosition(
+                updateLocation,
+                locationError
+            );
+
+        }
+
+        analyzeFrame(currentSession);
+
+    } catch (error) {
+
+        stopMonitoring();
+
+        statusBox.textContent =
+            "Camera unavailable or permission denied";
 
     }
 
+}
+
+
+// AUTOMATIC FRAME CAPTURE
+
+async function analyzeFrame(currentSession) {
+
+    if (!monitoring || busy ||
+        currentSession !== sessionId) return;
+
+    busy = true;
+
+    statusBox.textContent =
+        "🤖 Gemini AI Analyzing Situation...";
+
+    try {
+
+        if (!video.videoWidth) {
+            throw new Error("Camera frame not ready");
+        }
+
+        canvas.width = 640;
+
+        canvas.height = Math.round(
+            640 * video.videoHeight / video.videoWidth
+        );
+
+        const context = canvas.getContext("2d");
+
+        context.drawImage(
+            video,
+            0,
+            0,
+            canvas.width,
+            canvas.height
+        );
+
+        const image = await new Promise(resolve => {
+
+            canvas.toBlob(
+                resolve,
+                "image/jpeg",
+                0.7
+            );
+
+        });
+
+        if (!monitoring ||
+            currentSession !== sessionId) return;
+
+        if (!image) {
+            throw new Error("Image capture failed");
+        }
+
+        const formData = new FormData();
+
+        formData.append(
+            "image",
+            image,
+            "camera.jpg"
+        );
+
+        formData.append("latitude", latitude);
+        formData.append("longitude", longitude);
+
+        const response = await fetch(
+            "/camera-analysis",
+            {
+                method: "POST",
+                headers: {
+                    "X-Monitor-Key": monitorKey
+                },
+                body: formData
+            }
+        );
+
+        const result = await response.json();
+
+        if (currentSession !== sessionId) return;
+
+        if (!response.ok) {
+
+            if (response.status === 403) {
+
+                stopMonitoring();
+
+                throw new Error("Invalid monitoring key");
+
+            }
+
+            throw new Error(
+                result.error || "Analysis failed"
+            );
+
+        }
+
+        const colors = {
+
+            High: "#f87171",
+            Medium: "#facc15",
+            Low: "#4ade80",
+            Unknown: "#94a3b8"
+
+        };
+
+        resultBox.style.border =
+            "2px solid " +
+            (colors[result.threat_level] || "#94a3b8");
+
+        resultBox.textContent =
+
+            "THREAT LEVEL: " +
+            result.threat_level + "\n\n" +
+
+            "Situation:\n" +
+            result.description + "\n\n" +
+
+            "Reason:\n" +
+            result.reason + "\n\n" +
+
+            "Recommended Action:\n" +
+            result.action + "\n\n" +
+
+            "Alert Status:\n" +
+            result.alert_status + "\n\n" +
+
+            "Last Scan: " +
+            new Date().toLocaleTimeString();
+
+        statusBox.textContent =
+            "🟢 Monitoring Active — Next Scan Pending";
+
+    } catch (error) {
+
+        resultBox.textContent =
+            "Monitoring Error: " + error.message;
+
+        statusBox.textContent =
+            "Analysis unavailable";
+
+    } finally {
+
+        busy = false;
+
+        if (monitoring &&
+            currentSession === sessionId) {
+
+            timer = setTimeout(
+                () => analyzeFrame(currentSession),
+                30000
+            );
+
+        } else {
+
+            startButton.disabled = false;
+
+        }
+
+    }
+
+}
+
+
+// STOP CAMERA
+
+function stopMonitoring() {
+
+    monitoring = false;
+
+    sessionId++;
+
+    clearTimeout(timer);
+
+    if (stream) {
+
+        stream.getTracks().forEach(
+            track => track.stop()
+        );
+
+        stream = null;
+
+    }
+
+    if (gpsWatch !== null) {
+
+        navigator.geolocation.clearWatch(gpsWatch);
+
+        gpsWatch = null;
+
+    }
+
+    video.srcObject = null;
+
+    monitorKey = "";
+
+    startButton.disabled = busy;
+
+    statusBox.textContent =
+        "🔴 Camera Monitoring Stopped";
+
+}
+
+window.addEventListener(
+    "pagehide",
+    stopMonitoring
 );
 
 </script>
 
 </body>
+
 </html>
-```
-
-
