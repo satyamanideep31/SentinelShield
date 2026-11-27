@@ -3,5 +3,4 @@ scikit-learn
 pandas
 requests
 gunicorn
-openai
-streamlit
+google-genai
