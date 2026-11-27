@@ -13,7 +13,6 @@ def send_telegram_alert(
     longitude,
     image=None
 ):
-
     if not BOT_TOKEN or not CHAT_ID:
         raise RuntimeError("Telegram credentials missing")
 
@@ -35,7 +34,7 @@ def send_telegram_alert(
 ⚠️ Threat Level: {threat}
 
 📌 Situation:
-{report[:650]}
+{report[:500]}
 
 📍 Location:
 {location}
@@ -43,15 +42,12 @@ def send_telegram_alert(
 🕒 Time:
 {timestamp}
 
-AI assessment — human verification required.
+AI assessment - human verification required.
 """
 
-    base_url = (
-        f"https://api.telegram.org/bot{BOT_TOKEN}"
-    )
+    base_url = f"https://api.telegram.org/bot{BOT_TOKEN}"
 
     if image:
-
         response = requests.post(
             f"{base_url}/sendPhoto",
             data={
@@ -67,9 +63,7 @@ AI assessment — human verification required.
             },
             timeout=10
         )
-
     else:
-
         response = requests.post(
             f"{base_url}/sendMessage",
             data={
@@ -79,14 +73,14 @@ AI assessment — human verification required.
             timeout=10
         )
 
-result = response.json()
+    result = response.json()
 
-if not response.ok or not result.get("ok"):
+    if not response.ok or not result.get("ok"):
         raise RuntimeError(
             f"Telegram error: {result.get('error_code')} - "
             f"{result.get('description')}"
         )
 
-print("Telegram alert sent successfully", flush=True)
+    print("Telegram alert sent successfully", flush=True)
 
-return True
+    return True
