@@ -9,9 +9,10 @@ CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 def send_telegram_alert(
     report,
     threat,
-    latitude,
-    longitude,
-    image=None
+    latitude=None,
+    longitude=None,
+    image=None,
+    ai_result=None
 ):
     if not BOT_TOKEN or not CHAT_ID:
         raise RuntimeError("Telegram credentials missing")
@@ -34,7 +35,10 @@ def send_telegram_alert(
 ⚠️ Threat Level: {threat}
 
 📌 Situation:
-{report[:500]}
+{report}
+
+🤖 AI Analysis:
+{ai_result or "See situation details above."}
 
 📍 Location:
 {location}
@@ -47,12 +51,21 @@ AI assessment - human verification required.
 
     base_url = f"https://api.telegram.org/bot{BOT_TOKEN}"
 
+    def check_response(response):
+        result = response.json()
+
+        if not response.ok or not result.get("ok"):
+            raise RuntimeError(
+                f"Telegram error: {result.get('error_code')} - "
+                f"{result.get('description')}"
+            )
+
     if image:
         response = requests.post(
             f"{base_url}/sendPhoto",
             data={
                 "chat_id": CHAT_ID,
-                "caption": message
+                "caption": f"Sentinel Shield Alert: {threat}"
             },
             files={
                 "photo": (
@@ -63,23 +76,20 @@ AI assessment - human verification required.
             },
             timeout=10
         )
-    else:
+
+        check_response(response)
+
+    for start in range(0, len(message), 1800):
         response = requests.post(
             f"{base_url}/sendMessage",
             data={
                 "chat_id": CHAT_ID,
-                "text": message
+                "text": message[start:start + 1800]
             },
             timeout=10
         )
 
-    result = response.json()
-
-    if not response.ok or not result.get("ok"):
-        raise RuntimeError(
-            f"Telegram error: {result.get('error_code')} - "
-            f"{result.get('description')}"
-        )
+        check_response(response)
 
     print("Telegram alert sent successfully", flush=True)
 
