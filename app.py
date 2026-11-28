@@ -196,7 +196,7 @@ AI-generated assessment of an unverified report.
 
     except Exception as e:
 
-       app.logger.error(
+        app.logger.error(
             "Gemini analysis failed: %s, code=%s",
             type(e).__name__,
             getattr(e, "code", "unknown")
@@ -224,7 +224,7 @@ def analyze():
             "report", ""
         ).strip()
 
-        if not report: 
+        if not report:
 
             return "Please enter a report.", 400
 
@@ -254,7 +254,7 @@ def analyze():
 
             previous_hash=previous_hash
 
-        ) 
+        )
 
         # DATABASE STORAGE
 
@@ -297,7 +297,7 @@ def analyze():
 
             report=report,
 
-             threat=threat_level,
+            threat=threat_level,
 
             ai_result=ai_result,
 
@@ -385,7 +385,7 @@ Be professional, clear and concise.
 
             )
 
-        ) 
+        )
 
         if not response.text:
 
@@ -455,7 +455,7 @@ def camera_analysis():
             "error": "Monitoring access denied"
         }), 403
 
-if not client:
+    if not client:
         return jsonify({
             "error": "Gemini API unavailable"
         }), 503
