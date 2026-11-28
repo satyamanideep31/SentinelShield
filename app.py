@@ -268,22 +268,25 @@ def analyze():
 
         )
 
-        # TELEGRAM ALERT
+      # TELEGRAM ALERT
 
         if threat_level == "High":
 
             try:
 
                 send_telegram_alert(
-
                     report,
-
                     threat_level,
-
                     latitude,
+                    longitude,
+                    ai_result=ai_result
+                )
 
-                    longitude
+            except Exception as e:
 
+                app.logger.error(
+                    "Telegram alert failed: %s",
+                    type(e).__name__
                 )
 
             except Exception:
@@ -610,13 +613,18 @@ All values must be strings.
 
                 try:
 
-                    send_telegram_alert(
-                        report,
-                        threat,
-                        latitude,
-                        longitude,
-                        image=image
-                    )
+                send_telegram_alert(
+    description,
+    threat,
+    latitude,
+    longitude,
+    image=image,
+    ai_result=(
+        f"Analysis Source: Google Gemini AI\n\n"
+        f"Reason:\n{reason}\n\n"
+        f"Recommended Action:\n{action}"
+    )
+)
 
                     last_alert = time.monotonic()
 
