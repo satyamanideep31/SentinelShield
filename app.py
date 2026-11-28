@@ -134,7 +134,7 @@ Analyze the complete reported situation.
 
 Return a JSON object containing:
 
-threat_level: Low, Medium or High
+threat_level: Low, Medium or 
 reason: Detailed explanation
 risks: Potential risks
 action: Recommended safety measures
@@ -164,7 +164,7 @@ All JSON values must be strings.
 
         threat = result["threat_level"].strip().title()
 
-        if threat not in ["Low", "Medium", "High"]:
+        if threat not in ["Low", "Medium", ""]:
 
             raise ValueError("Invalid threat level")
 
@@ -588,7 +588,7 @@ All values must be strings.
         alert_sent = False
         alert_status = "Not required"
 
-        # HIGH RISK INCIDENT
+               # HIGH RISK INCIDENT
 
         if threat == "High":
 
@@ -596,9 +596,7 @@ All values must be strings.
 
             if not last_alert or now - last_alert >= 120:
 
-                previous_block = (
-                    blockchain.get_previous_block()
-                )
+                previous_block = blockchain.get_previous_block()
 
                 block = blockchain.create_block(
                     data=report,
@@ -612,24 +610,36 @@ All values must be strings.
                 )
 
                 try:
-
-                send_telegram_alert(
-    description,
-    threat,
-    latitude,
-    longitude,
-    image=image,
-    ai_result=(
-        f"Analysis Source: Google Gemini AI\n\n"
-        f"Reason:\n{reason}\n\n"
-        f"Recommended Action:\n{action}"
-    )
-)
+                    send_telegram_alert(
+                        description,
+                        threat,
+                        latitude,
+                        longitude,
+                        image=image,
+                        ai_result=(
+                            f"Analysis Source: Google Gemini AI\n\n"
+                            f"Reason:\n{reason}\n\n"
+                            f"Recommended Action:\n{action}"
+                        )
+                    )
 
                     last_alert = time.monotonic()
 
                     alert_sent = True
                     alert_status = "Telegram alert sent"
+
+                except Exception as e:
+
+                    alert_status = "Telegram delivery failed"
+
+                    app.logger.error(
+                        "Camera Telegram alert failed: %s",
+                        type(e).__name__
+                    )
+
+            else:
+
+                alert_status = "Alert cooldown active"
 
                 except Exception:
 
