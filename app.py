@@ -134,7 +134,7 @@ Analyze the complete reported situation.
 
 Return a JSON object containing:
 
-threat_level: Low, Medium or 
+threat_level: Low, Medium or High
 reason: Detailed explanation
 risks: Potential risks
 action: Recommended safety measures
@@ -164,7 +164,7 @@ All JSON values must be strings.
 
         threat = result["threat_level"].strip().title()
 
-        if threat not in ["Low", "Medium", ""]:
+        if threat not in ["Low", "Medium", "High"]:
 
             raise ValueError("Invalid threat level")
 
@@ -196,7 +196,7 @@ AI-generated assessment of an unverified report.
 
     except Exception as e:
 
-        app.logger.error(
+       app.logger.error(
             "Gemini analysis failed: %s, code=%s",
             type(e).__name__,
             getattr(e, "code", "unknown")
@@ -224,7 +224,7 @@ def analyze():
             "report", ""
         ).strip()
 
-        if not report:
+        if not report: 
 
             return "Please enter a report.", 400
 
@@ -254,7 +254,7 @@ def analyze():
 
             previous_hash=previous_hash
 
-        )
+        ) 
 
         # DATABASE STORAGE
 
@@ -268,7 +268,7 @@ def analyze():
 
         )
 
-      # TELEGRAM ALERT
+        # TELEGRAM ALERT
 
         if threat_level == "High":
 
@@ -289,12 +289,6 @@ def analyze():
                     type(e).__name__
                 )
 
-            except Exception:
-
-                app.logger.error(
-                    "Telegram alert failed"
-                )
-
         # RESULT PAGE
 
         return render_template(
@@ -303,7 +297,7 @@ def analyze():
 
             report=report,
 
-            threat=threat_level,
+             threat=threat_level,
 
             ai_result=ai_result,
 
@@ -391,7 +385,7 @@ Be professional, clear and concise.
 
             )
 
-        )
+        ) 
 
         if not response.text:
 
@@ -461,7 +455,7 @@ def camera_analysis():
             "error": "Monitoring access denied"
         }), 403
 
-    if not client:
+if not client:
         return jsonify({
             "error": "Gemini API unavailable"
         }), 503
@@ -588,7 +582,7 @@ All values must be strings.
         alert_sent = False
         alert_status = "Not required"
 
-               # HIGH RISK INCIDENT
+        # HIGH RISK INCIDENT
 
         if threat == "High":
 
@@ -641,18 +635,6 @@ All values must be strings.
 
                 alert_status = "Alert cooldown active"
 
-                except Exception:
-
-                    alert_status = "Telegram delivery failed"
-
-                    app.logger.error(
-                        "Camera Telegram alert failed"
-                    )
-
-            else:
-
-                alert_status = "Alert cooldown active"
-
         return jsonify({
 
             "threat_level": threat,
@@ -688,7 +670,3 @@ if __name__ == "__main__":
         host="0.0.0.0",
 
         port=int(os.getenv("PORT", 5000)),
-
-        debug=False
-
-    )
