@@ -594,7 +594,7 @@ All values must be strings.
 
         # HIGH RISK INCIDENT
 
-        if threat == "High":
+        if threat in ["High", "Medium"]:
 
             now = time.monotonic()
 
